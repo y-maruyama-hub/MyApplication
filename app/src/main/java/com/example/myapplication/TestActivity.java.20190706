@@ -1,0 +1,433 @@
+package com.example.myapplication;
+
+//import android.app.Activity;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+//import android.app.TimePickerDialog;
+import android.widget.CompoundButton;
+import android.widget.TimePicker;
+import android.widget.Switch;
+import android.os.Build;
+import android.content.Intent;
+import android.content.Context;
+import android.widget.ListView;
+import android.widget.AdapterView;
+import android.widget.Toast;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+
+import android.content.DialogInterface;
+import android.app.AlertDialog;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+
+import java.util.ArrayList;
+
+import io.realm.Realm;
+import io.realm.RealmResults;
+import io.realm.Sort;
+
+import java.util.Calendar;
+
+
+public class TestActivity extends AppCompatActivity  {
+
+    Switch alarmSwitch;
+    ListView lv;
+    Z1Fragment z1=null;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_test);
+        if (savedInstanceState == null) {
+
+            lv = findViewById(R.id.lv);
+
+            TimerAdapter ta = new TimerAdapter(this);
+
+            Realm.init(getApplicationContext());
+            Realm realm = Realm.getDefaultInstance();
+
+            try {
+                ArrayList<TimerItem> ar = getTimerList(realm);
+                ta.setList(ar);
+            }
+            catch(Exception ex){
+                ex.printStackTrace();
+            }
+            finally{
+                realm.close();
+            }
+
+            lv.setAdapter(ta);
+
+
+            lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent,View view, int position, long id){
+
+                    ListView listView = (ListView) parent;
+
+                    if(id==R.id.abtn) {
+                        View v = listView.getChildAt(position);
+                        //View c = v.findViewWithTag("ln2");
+                        View c1 = v.findViewById(R.id.ln1);
+                        View c2 = v.findViewById(R.id.ln2);
+
+                        if(c2.getVisibility()==View.VISIBLE) {
+                            c1.setVisibility(View.VISIBLE);
+                            c2.setVisibility(View.GONE);
+                        }
+                        else {
+                            c2.setVisibility(View.VISIBLE);
+                            c1.setVisibility(View.GONE);
+                        }
+                    }
+                    else if(id==R.id.chgbtn) {
+                        TimerItem ti = (TimerItem) listView.getItemAtPosition(position);
+
+                        pop(ti.getId(),ti.getTm());
+                    }
+                    else {
+                        System.out.println("aaa");
+                    }
+                }
+            });
+
+            lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+
+                @Override
+                public boolean onItemLongClick(AdapterView<?> parent,View view, int position, long id){
+                    TimerItem ti = (TimerItem)parent.getAdapter().getItem(position);
+
+                    if(deleteTimer(ti.getId())){
+                        unregister(ti.getId());
+                    }
+
+                    return true;
+                }
+            });
+
+
+
+
+            Button pcButton = findViewById(R.id.pc_button);
+            pcButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Realm.init(getApplicationContext());
+                    Realm realm = Realm.getDefaultInstance();
+
+                    int tid=-1;
+
+                    try {
+                        realm.beginTransaction();
+                        RealmResults<TimerSetting> tmlist = realm.where(TimerSetting.class).findAll().sort("id", Sort.DESCENDING);
+
+                        int mxc=10;
+
+                        if(tmlist.size()>=mxc) {
+                            Toast.makeText(getApplicationContext(), "登録上限オーバーです。", Toast.LENGTH_LONG).show();
+                        }
+                        else {
+
+                            if(tmlist.size() == 0)  tid=0;
+                            else{
+                                if(tmlist.first().getId()==mxc-1){
+
+                                }
+                                else    tid = tmlist.first().getId() + 1;
+                            }
+
+                            //tid = tmlist.size() == 0 ? 0 : tmlist.first().getId() + 1;
+
+                            pop(tid, null);
+                        }
+                    }
+                    catch(Exception ex) {
+                        ex.printStackTrace();
+                    }
+                    finally {
+                        realm.close();
+                    }
+
+                }
+            });
+
+            alarmSwitch = findViewById(R.id.alarm_switch);
+
+            alarmSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                    FragmentManager fragmentManager = getSupportFragmentManager();
+                    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+                    if (isChecked) {
+                        z1=Z1Fragment.newInstance("Message");
+
+                        fragmentTransaction.replace(R.id.container, z1);
+                        fragmentTransaction.commit();
+                    }
+                    else{
+                        fragmentTransaction.hide(z1);
+                        fragmentTransaction.commit();
+                    }
+                }
+            });
+
+
+/*            Button z1btn = findViewById(R.id.z1_button);
+            z1btn.setOnClickListener(new View.OnClickListener(){
+
+                @Override
+                public void onClick(View view) {
+
+                }
+            });
+*/
+
+        }
+    }
+
+	private ArrayList<TimerItem> getTimerList(Realm realm){
+
+		ArrayList<TimerItem> ar = new ArrayList<>();
+
+		try{
+			RealmResults<TimerSetting> tmlist = realm.where(TimerSetting.class).findAll().sort("tm", Sort.ASCENDING);
+
+			for (int i=0; i<tmlist.size(); i++) {
+
+				TimerItem ti=new TimerItem();
+
+				ti.setId(tmlist.get(i).getId());
+				ti.setTm(tmlist.get(i).getTm());
+
+				ar.add(ti);
+			}
+		}
+		catch(Exception ex){
+			ex.printStackTrace();
+		}
+		finally{
+			realm.close();
+		}
+        return ar;
+	}
+
+
+    private void pop(final int tid,java.util.Date tm){
+
+        Calendar almcal= Calendar.getInstance();
+
+        if(tm!=null)    almcal.setTime(tm);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        builder.setTitle("My Time Picker Dialog");
+
+        final TimePicker tp = new TimePicker(this);
+        tp.setIs24HourView(true);
+        tp.setCurrentHour(almcal.get(Calendar.HOUR_OF_DAY));
+        tp.setCurrentMinute(almcal.get(Calendar.MINUTE));
+
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+
+                int h = tp.getCurrentHour();
+                int m = tp.getCurrentMinute();
+
+                long alarmTimeMillis = AlarmRegister.getNextTime(h,m);
+                if(addTimer(tid,alarmTimeMillis)){
+                    register(tid,alarmTimeMillis);
+                }
+//                register(tid,h,m);
+
+                alarmSwitch.setChecked(true);
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+
+
+        builder.setView(tp);
+        builder.create().show();
+
+/*
+        TimePickerDialog timePickerDialog = new TimePickerDialog(TestActivity.this, new TimePickerDialog.OnTimeSetListener() {
+            @Override
+            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+
+                almcal.set(Calendar.YEAR,almcal.get(Calendar.YEAR));
+                almcal.set(Calendar.MONTH,almcal.get(Calendar.MONTH));
+                almcal.set(Calendar.DATE,almcal.get(Calendar.DATE));
+                almcal.set(Calendar.HOUR_OF_DAY,hourOfDay);
+                almcal.set(Calendar.MINUTE,minute);
+                almcal.set(Calendar.SECOND,0);
+
+
+System.out.println(almcal.getTime());
+                register(almcal.getTimeInMillis());
+
+                alarmSwitch.setChecked(true);
+            }
+        },hour,minute,true);
+
+        timePickerDialog.show();
+*/
+    }
+
+    /*
+    private long getNextTime(int h,int m){
+
+        Calendar cal = Calendar.getInstance();
+
+        cal.set(Calendar.HOUR_OF_DAY,h);
+        cal.set(Calendar.MINUTE,m);
+
+        long time = cal.getTimeInMillis();
+
+        if(System.currentTimeMillis()<time)	    return time;
+
+        cal.add(Calendar.DATE,1);
+
+        return cal.getTimeInMillis();
+    }
+*/
+
+    private int getMinute(long time){
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(time);
+
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+        int min = cal.get(Calendar.MINUTE);
+
+        return hour*60+min;
+    }
+
+
+    private void register(int tid,long alarmTimeMillis) {
+
+		//long alarmTimeMillis = getNextTime(h,m);
+
+        //Toast.makeText(getApplicationContext(), String.format("%d %d %d",tid,h,m), Toast.LENGTH_LONG).show();
+
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        intent.setClass(this, AlarmReceiver.class);
+        intent.putExtra("tid",tid);
+        intent.putExtra("repmin",1);
+//      PendingIntent pendingIntent = PendingIntent.getBroadcast(this, idn, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, tid, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+//      alarmSet(pendingIntent,alarmTimeMillis);
+
+        AlarmRegister alr = new AlarmRegister(this);
+        alr.alarmSet(pendingIntent,alarmTimeMillis);
+    }
+
+
+	private boolean addTimer(int tid,long alarmTimeMillis){
+
+		boolean res = true;
+
+        Realm.init(getApplicationContext());
+        Realm realm = Realm.getDefaultInstance();
+
+        try {
+            realm.beginTransaction();
+
+//            if (idn < 0){
+                //get max
+//                RealmResults<TimerSetting> tmlist = realm.where(TimerSetting.class).findAll().sort("id", Sort.DESCENDING);
+//
+//               idn = tmlist.size()==0 ? 0 : tmlist.first().getId()+1;
+//		    }
+//            else{
+//                delete pendding intent
+//      }
+
+            TimerSetting timersetting = new TimerSetting();
+
+            timersetting.setId(tid);
+            timersetting.setTm(new java.util.Date(alarmTimeMillis));
+
+            realm.copyToRealmOrUpdate(timersetting);
+
+            realm.commitTransaction();
+ //         realm.cancelTransaction();
+
+            TimerAdapter ta = (TimerAdapter)lv.getAdapter();
+            ta.removeList();
+
+            ArrayList<TimerItem> ar = getTimerList(realm);
+            ta.setList(ar);
+
+			ta.notifyDataSetChanged();
+        }
+        catch(Exception ex) {
+            ex.printStackTrace();
+            res=false;
+        }
+        finally {
+            realm.close();
+        }
+
+        return res;
+	}
+
+    private void unregister(int tid) {
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        Toast.makeText(getApplicationContext(), String.format("%d delete",tid), Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(this, AlarmReceiver.class);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, tid, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        alarmManager.cancel(pendingIntent);
+    }
+
+    private boolean deleteTimer(int tid){
+
+    	boolean res = true;
+
+        Realm.init(getApplicationContext());
+        Realm realm = Realm.getDefaultInstance();
+
+        try {
+            realm.beginTransaction();
+
+            RealmResults<TimerSetting> tmlist = realm.where(TimerSetting.class).equalTo("id",tid).findAll();
+
+            tmlist.deleteAllFromRealm();
+ //         tmlist.deleteFromRealm(tid);
+
+            realm.commitTransaction();
+
+            TimerAdapter ta = (TimerAdapter)lv.getAdapter();
+
+            ta.removeList();
+
+            ArrayList<TimerItem> ar = getTimerList(realm);
+            ta.setList(ar);
+
+			ta.notifyDataSetChanged();
+        }
+        catch(Exception ex) {
+            ex.printStackTrace();
+            res=false;
+        }
+        finally {
+            realm.close();
+        }
+
+        return res;
+    }
+
+
+}

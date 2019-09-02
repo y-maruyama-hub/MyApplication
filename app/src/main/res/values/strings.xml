@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="message_name_text_hint">テスト</string>
+    <string name="label_go_button_go">GO</string>
+    <string name="label_m1_button">M1</string>
+    <string name="label_m2_button">M2</string>
+    <string name="label_pc_button">PC</string>
+    <string name="label_open">開く</string>
+    <string name="label_edit">変更</string>
+    <string name="label_btnstop">停止</string>
+    <string name="label_btnsnooze">スヌーズ</string>
+    <string name="z1text">フラグメント</string>
+</resources>

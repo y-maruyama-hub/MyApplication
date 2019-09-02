@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" 
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:descendantFocusability="blocksDescendants">
+<!---->
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    	<Button
+   	    	android:id="@+id/abtn"
+        	android:text="@string/label_open"
+        	android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+			android:layout_gravity="right"/>
+
+    	<LinearLayout
+    		android:id="@+id/ln1"
+    		android:clickable="true"
+			android:longClickable="true"
+			android:focusable="true"
+			android:background="#00ff00"
+        	android:orientation="horizontal"
+        	android:layout_width="match_parent"
+        	android:layout_height="wrap_content">
+
+        	<TextView
+        		android:id="@+id/time"
+            	android:layout_width="0dp"
+            	android:layout_height="wrap_content"
+            	android:text="New Text"
+            	android:textSize="20dp"
+            	android:layout_weight="1" />
+
+        	<Switch
+        		android:id="@+id/sq"
+            	android:layout_width="wrap_content"
+            	android:layout_height="wrap_content"
+            	android:checked="false" />
+    	</LinearLayout>
+    	<LinearLayout
+    		android:id="@+id/ln2"
+    		android:tag="ln2"
+        	android:orientation="vertical"
+        	android:layout_width="match_parent"
+        	android:layout_height="300dp"
+        	android:visibility="visible">
+			<LinearLayout
+				android:orientation="horizontal"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content">
+        		<TextView
+        			android:id="@+id/stgs"
+            		android:layout_width="0dp"
+            		android:layout_height="wrap_content"
+            		android:text="New Text"
+            		android:textSize="20dp"
+            		android:layout_weight="1" />
+
+				<Button
+					android:id="@+id/chgbtn"
+					android:text="@string/label_edit"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content" />
+			</LinearLayout>
+			<LinearLayout
+				android:orientation="horizontal"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content">
+				<Spinner android:id="@+id/intrv"
+					android:layout_width="fill_parent"
+					android:layout_height="wrap_content" />
+			</LinearLayout>
+		</LinearLayout>
+	</LinearLayout>
+</FrameLayout>
